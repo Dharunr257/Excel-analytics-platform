@@ -13,7 +13,7 @@ const Dashboard = () => {
   const user = getUser();
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
-  
+  const [me, setme] = useState(null);
 
   useEffect(() => {
     if (!token) navigate("/");
@@ -21,6 +21,20 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchUploads();
+  }, []);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get("/auth/me");
+        setme(res.data); // your useState hook
+      } catch (err) {
+        console.error("❌ Failed to load user", err);
+        navigate("/login");
+      }
+    };
+
+    fetchUser();
   }, []);
 
   const fetchUploads = async () => {
@@ -87,7 +101,7 @@ const Dashboard = () => {
   return (
     <div className="max-w-6xl mx-auto mt-10 p-6">
       <h1 className="flex flex-wrap justify-center text-3xl font-bold mb-6">
-        Welcome, {user?.name || "User"} 👋
+        Welcome, {me?.name || "User"} 👋
       </h1>
 
       {/* Upload Section */}
