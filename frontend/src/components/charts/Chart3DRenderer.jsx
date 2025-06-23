@@ -2,9 +2,9 @@
 import Plot from "react-plotly.js";
 import PropTypes from "prop-types";
 import Plotly from "plotly.js-dist-min";
-import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import { forwardRef, useRef, useImperativeHandle } from "react";
 
-// Utility to convert any value into a number
+// Convert categorical to numeric if needed
 const convertToNumeric = (() => {
   const cache = {};
   return (value, key) => {
@@ -19,98 +19,107 @@ const convertToNumeric = (() => {
   };
 })();
 
-// ForwardRef to allow parent (ChartPicker) to download chart
-const Chart3DRenderer = forwardRef(({
-  chartType = "scatter3d",
-  dataRows = [],
-  selectedX = "",
-  selectedY = "",
-  selectedZ = "",
-  color = "#3b82f6",
-}, ref) => {
-  const plotRef = useRef(null);
+const Chart3DRenderer = forwardRef(
+  ({ chartType = "scatter3d", dataRows = [], selectedX, selectedY, selectedZ, color = "#3b82f6" }, ref) => {
+    const plotRef = useRef(null);
 
-  const x = [], y = [], z = [];
+    const x = [], y = [], z = [];
 
-  dataRows.forEach((row) => {
-    const valX = convertToNumeric(row[selectedX], selectedX);
-    const valY = convertToNumeric(row[selectedY], selectedY);
-    const valZ = convertToNumeric(row[selectedZ], selectedZ);
-    if (!isNaN(valX) && !isNaN(valY) && !isNaN(valZ)) {
-      x.push(valX);
-      y.push(valY);
-      z.push(valZ);
-    }
-  });
-
-  const data = [];
-
-  if (chartType === "scatter3d" || chartType === "line3d") {
-    data.push({
-      type: "scatter3d",
-      mode: chartType === "line3d" ? "lines+markers" : "markers",
-      x,
-      y,
-      z,
-      marker: { size: 5, color },
-      line: chartType === "line3d" ? { color } : undefined,
-    });
-  } else if (chartType === "mesh3d") {
-    // NOTE: Mesh3D requires triangle indices; here we simulate basic layout
-    data.push({
-      type: "mesh3d",
-      x,
-      y,
-      z,
-      color,
-      opacity: 0.6,
-      intensity: z,
-    });
-    // Add points for better visibility
-    data.push({
-      type: "scatter3d",
-      mode: "markers",
-      x,
-      y,
-      z,
-      marker: { size: 3, color: "#333" },
-    });
-  }
-
-  const layout = {
-    title: `${chartType.toUpperCase()} - 3D`,
-    autosize: true,
-    height: 500,
-    scene: {
-      xaxis: { title: selectedX },
-      yaxis: { title: selectedY },
-      zaxis: { title: selectedZ },
-    },
-    margin: { t: 50, l: 0, r: 0, b: 0 },
-  };
-
-  // Expose download function to parent
-  useImperativeHandle(ref, () => ({
-    async downloadImage() {
-      if (plotRef.current) {
-        const gd = plotRef.current.getPlotly();
-        const imageData = await Plotly.toImage(gd, { format: "png", height: 500, width: 800 });
-        return imageData;
+    dataRows.forEach((row) => {
+      const valX = convertToNumeric(row[selectedX], selectedX);
+      const valY = convertToNumeric(row[selectedY], selectedY);
+      const valZ = convertToNumeric(row[selectedZ], selectedZ);
+      if (!isNaN(valX) && !isNaN(valY) && !isNaN(valZ)) {
+        x.push(valX);
+        y.push(valY);
+        z.push(valZ);
       }
-      return null;
-    }
-  }));
+    });
 
-  return (
-    <Plot
-      ref={plotRef}
-      data={data}
-      layout={layout}
-      config={{ responsive: true }}
-      style={{ width: "100%" }}
-    />
-  );
-});
+    const data = [];
+
+    if (chartType === "scatter3d" || chartType === "line3d") {
+      data.push({
+        type: "scatter3d",
+        mode: chartType === "line3d" ? "lines+markers" : "markers",
+        x,
+        y,
+        z,
+        marker: { size: 5, color },
+        line: chartType === "line3d" ? { color } : undefined,
+      });
+    } else if (chartType === "mesh3d") {
+      data.push({
+        type: "mesh3d",
+        x,
+        y,
+        z,
+        color,
+        opacity: 0.6,
+        intensity: z,
+      });
+      // Add scatter markers for visibility
+      data.push({
+        type: "scatter3d",
+        mode: "markers",
+        x,
+        y,
+        z,
+        marker: { size: 3, color: "#444" },
+      });
+    }
+
+    const layout = {
+      title: `${chartType.toUpperCase()} - 3D Chart`,
+      autosize: true,
+      height: 500,
+      margin: { t: 50, l: 0, r: 0, b: 0 },
+      scene: {
+        xaxis: { title: selectedX },
+        yaxis: { title: selectedY },
+        zaxis: { title: selectedZ },
+      },
+    };
+
+    // ✅ Expose download method to parent
+    useImperativeHandle(ref, () => ({
+      async downloadImage() {
+        try {
+          const domNode = plotRef.current?.el;
+          if (!domNode) return null;
+
+          const imageData = await Plotly.toImage(domNode, {
+            format: "png",
+            width: 900,
+            height: 600,
+          });
+          return imageData;
+        } catch (error) {
+          console.error("3D chart download failed:", error);
+          return null;
+        }
+      },
+    }));
+
+    if (x.length === 0 || y.length === 0 || z.length === 0) {
+      return (
+        <p className="text-center text-red-500 py-4">
+          No valid 3D data to display.
+        </p>
+      );
+    }
+
+    return (
+      <Plot
+        ref={plotRef}
+        data={data}
+        layout={layout}
+        config={{ responsive: true, displaylogo: false }}
+        style={{ width: "100%" }}
+      />
+    );
+  }
+);
 
 Chart3DRenderer.displayName = "Chart3DRenderer";
 

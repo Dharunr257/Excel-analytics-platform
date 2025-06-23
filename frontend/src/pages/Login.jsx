@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import axios from '../api/axiosInstance';
-import { useDispatch } from 'react-redux';
-import { setCredentials } from '../redux/slices/authSlice';
-import { useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import axios from "../api/axiosInstance";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "../redux/slices/authSlice";
+import { useNavigate } from "react-router-dom";
+import { saveAuthData } from "../utils/auth";
 
 const Login = () => {
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -15,22 +17,63 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!form.email || !form.password) {
+      alert("Please enter both email and password.");
+      return;
+    }
+
     try {
-      const res = await axios.post('/auth/login', form);
+      setLoading(true);
+      const res = await axios.post("/auth/login", form);
+      const { token, ...userData } = res.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      saveAuthData(res.data.token, res.data.user);
       dispatch(setCredentials(res.data));
-      navigate('/dashboard');
+      navigate("/");
     } catch (err) {
-      alert(err.response?.data?.message || 'Login failed');
+      console.error("Login failed:", err);
+      alert(
+        err?.response?.data?.message || "Invalid credentials or server error."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 border shadow rounded">
-      <h2 className="text-2xl font-bold mb-4">Login</h2>
+    <div className="max-w-md mx-auto mt-20 p-6 border rounded shadow bg-white">
+      <h2 className="text-2xl font-bold mb-4 text-center">🔐 Login</h2>
+
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input name="email" onChange={handleChange} required placeholder="Email" className="w-full p-2 border rounded" />
-        <input name="password" type="password" onChange={handleChange} required placeholder="Password" className="w-full p-2 border rounded" />
-        <button className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">Login</button>
+        <input
+          name="email"
+          type="email"
+          value={form.email}
+          onChange={handleChange}
+          required
+          placeholder="Email"
+          className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300"
+        />
+
+        <input
+          name="password"
+          type="password"
+          value={form.password}
+          onChange={handleChange}
+          required
+          placeholder="Password"
+          className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-blue-300"
+        />
+
+        <button
+          type="submit"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-medium"
+          disabled={loading}
+        >
+          {loading ? "Logging in..." : "Login"}
+        </button>
       </form>
     </div>
   );
