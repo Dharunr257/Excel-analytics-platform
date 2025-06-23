@@ -123,3 +123,58 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
+
+// @route   DELETE /api/upload/:id
+// @desc    Delete an uploaded file by ID (and from disk)
+// @access  Private
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const upload = await Upload.findById(req.params.id);
+    if (!upload) {
+      return res.status(404).json({ message: 'File not found in DB' });
+    }
+
+    // Check authorization
+    if (upload.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    // Delete from disk
+    if (fs.existsSync(upload.filePath)) {
+      fs.unlinkSync(upload.filePath);
+    } else {
+      console.warn("⚠️ File not found on disk:", upload.filePath);
+    }
+
+    // Delete from DB
+    await Upload.deleteOne({ _id: req.params.id });
+
+    res.json({ message: 'File deleted successfully' });
+  } catch (error) {
+    console.error("❌ File delete failed:", error);
+    res.status(500).json({ message: 'Failed to delete file', error: error.message });
+  }
+});
+
+// @route   GET /api/upload/download/:id
+// @desc    Download uploaded file by ID
+// @access  Private
+router.get('/download/:id', protect, async (req, res) => {
+  try {
+    const upload = await Upload.findById(req.params.id);
+    if (!upload || upload.user.toString() !== req.user._id.toString()) {
+      return res.status(404).json({ message: 'File not found or unauthorized' });
+    }
+
+    const filePath = path.resolve(upload.filePath);
+    if (fs.existsSync(filePath)) {
+      res.download(filePath, upload.fileName);
+    } else {
+      res.status(404).json({ message: 'File not found on disk' });
+    }
+  } catch (error) {
+    console.error("File download error:", error);
+    res.status(500).json({ message: 'Failed to download file' });
+  }
+});
+

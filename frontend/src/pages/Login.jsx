@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "../api/axiosInstance";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../redux/slices/authSlice";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,Link } from "react-router-dom";
 import { saveAuthData } from "../utils/auth";
 
 const Login = () => {
@@ -75,6 +75,17 @@ const Login = () => {
           {loading ? "Logging in..." : "Login"}
         </button>
       </form>
+
+      <div className="text-center mt-4">
+        <p className="text-sm text-gray-600">Don’t have an account?</p>
+        <Link
+          to="/register"
+          className="text-blue-600 hover:underline font-medium"
+        >
+          ➕ Register Now
+        </Link>
+      </div>
+      
     </div>
   );
 };
