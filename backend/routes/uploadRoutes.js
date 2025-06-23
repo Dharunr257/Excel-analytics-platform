@@ -51,7 +51,11 @@ router.post('/', protect, upload.single('file'), async (req, res) => {
     const worksheet = workbook.Sheets[sheetName];
 
     const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
-    const headers = jsonData[0];
+    const headers = jsonData[0] || [];
+
+    if (!headers.length) {
+      return res.status(400).json({ message: 'No headers found in Excel file.' });
+    }
 
     const uploadEntry = await Upload.create({
       user: req.user._id,
@@ -63,7 +67,7 @@ router.post('/', protect, upload.single('file'), async (req, res) => {
     res.status(201).json({
       message: 'File uploaded successfully',
       upload: uploadEntry,
-      columns,
+      columns: uploadEntry.columns || [],
     });
   } catch (error) {
     console.error(error);

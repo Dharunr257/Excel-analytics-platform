@@ -14,6 +14,7 @@ const Dashboard = () => {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
   const [me, setme] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!token) navigate("/");
@@ -55,12 +56,18 @@ const Dashboard = () => {
     const formData = new FormData();
     formData.append("file", file);
 
+    setUploading(true);
     try {
-      const res = await axios.post("/upload", formData);
-      setUploads((prev) => [res.data.upload, ...prev]);
+      await axios.post("/upload", formData);
+      const refreshed = await axios.get("/upload/history");
+      setUploads(refreshed.data);
       setFile(null);
+      alert("✅ File uploaded!");
     } catch (err) {
+      console.error("Upload failed", err);
       alert(err.response?.data?.message || "Upload failed");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -118,8 +125,9 @@ const Dashboard = () => {
         <button
           type="submit"
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          disabled={uploading}
         >
-          Upload Excel
+          {uploading ? "Uploading..." : "Upload Excel"}
         </button>
       </form>
 
