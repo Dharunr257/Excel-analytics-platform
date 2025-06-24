@@ -11,22 +11,34 @@ export const getAllUsers = async (req, res) => {
 
 // 🔹 Delete user by ID
 export const deleteUser = async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) return res.status(404).json({ message: 'User not found' });
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-  await user.remove();
-  res.json({ message: 'User deleted successfully' });
+    await user.deleteOne();
+    res.json({ message: 'User deleted' });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    res.status(500).json({ message: "Failed to delete user" });
+  }
 };
 
 // 🔹 Get dashboard stats
 export const getStats = async (req, res) => {
-  const userCount = await User.countDocuments();
-  const fileCount = await Upload.countDocuments();
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalAdmins = await User.countDocuments({ isAdmin: true });
+    const totalFiles = await Upload.countDocuments();
 
-  res.json({
-    totalUsers: userCount,
-    totalFiles: fileCount,
-  });
+    res.json({
+      totalUsers,
+      totalAdmins,
+      totalFiles,
+    });
+  } catch (error) {
+    console.error("Failed to fetch admin stats:", error);
+    res.status(500).json({ message: "Failed to fetch stats" });
+  }
 };
 
 // 🔹 View audit logs
@@ -101,5 +113,26 @@ export const deleteFileById = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to delete file' });
+  }
+};
+
+export const getAllFiles = async (req, res) => {
+  try {
+    const uploads = await Upload.find({})
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
+
+    const files = uploads.map((file) => ({
+      _id: file._id,
+      fileName: file.fileName,
+      createdAt: file.createdAt,
+      userName: file.user?.name || "Unknown",
+      userEmail: file.user?.email || "N/A",
+    }));
+
+    res.json(files);
+  } catch (error) {
+    console.error("Failed to fetch all files", error);
+    res.status(500).json({ message: "Error fetching files" });
   }
 };

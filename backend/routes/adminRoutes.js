@@ -6,7 +6,8 @@ import {
   getAuditLogs,
   getUserUploadCounts,
   getAllUploads,
-  deleteFileById
+  deleteFileById,
+  getAllFiles
 } from '../controllers/adminController.js';
 
 import { protect, adminOnly } from '../middlewares/authMiddleware.js';
@@ -23,6 +24,8 @@ router.get('/stats', getStats);
 router.get('/logs', getAuditLogs);
 router.get('/user-uploads-count', getUserUploadCounts);
 router.get('/uploads', getAllUploads);
+router.get('/files', getAllFiles);
 router.delete('/file/:id', deleteFileById);
+
 
 export default router;

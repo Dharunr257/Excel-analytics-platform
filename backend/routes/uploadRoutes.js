@@ -138,19 +138,22 @@ router.delete('/:id', protect, async (req, res) => {
       return res.status(404).json({ message: 'File not found in DB' });
     }
 
-    // Check authorization
-    if (upload.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Unauthorized' });
+    // ✅ Allow owner or admin to delete
+    const isOwner = upload.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.isAdmin;
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Unauthorized to delete this file' });
     }
 
-    // Delete from disk
+    // ✅ Delete from disk if exists
     if (fs.existsSync(upload.filePath)) {
       fs.unlinkSync(upload.filePath);
     } else {
       console.warn("⚠️ File not found on disk:", upload.filePath);
     }
 
-    // Delete from DB
+    // ✅ Delete from DB
     await Upload.deleteOne({ _id: req.params.id });
 
     res.json({ message: 'File deleted successfully' });
@@ -166,8 +169,16 @@ router.delete('/:id', protect, async (req, res) => {
 router.get('/download/:id', protect, async (req, res) => {
   try {
     const upload = await Upload.findById(req.params.id);
-    if (!upload || upload.user.toString() !== req.user._id.toString()) {
-      return res.status(404).json({ message: 'File not found or unauthorized' });
+    if (!upload) {
+      return res.status(404).json({ message: 'File not found in DB' });
+    }
+
+    // ✅ Allow owner or admin to download
+    const isOwner = upload.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.isAdmin;
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Unauthorized to download this file' });
     }
 
     const filePath = path.resolve(upload.filePath);
@@ -177,7 +188,7 @@ router.get('/download/:id', protect, async (req, res) => {
       res.status(404).json({ message: 'File not found on disk' });
     }
   } catch (error) {
-    console.error("File download error:", error);
+    console.error("❌ File download error:", error);
     res.status(500).json({ message: 'Failed to download file' });
   }
 });

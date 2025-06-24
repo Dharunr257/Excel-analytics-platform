@@ -2,51 +2,69 @@
 import { useEffect, useState } from "react";
 import axios from "../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
-import StatsCard from "../components/admin/StatsCard";
-import UsersTable from "../components/admin/UsersTable";
+import UsersTable from "../components/admin/UsersTable.jsx";
+import FilesTable from "../components/admin/FilesTable.jsx";
 import AuditLogTable from "../components/admin/AuditLogTable";
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({});
-  const [users, setUsers] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAdminData = async () => {
+    const fetchStats = async () => {
       try {
-        const statsRes = await axios.get("/admin/stats");
-        const usersRes = await axios.get("/admin/users");
-        const logsRes = await axios.get("/admin/logs");
-
-        setStats(statsRes.data);
-        setUsers(usersRes.data);
-        setLogs(logsRes.data);
+        const res = await axios.get("/admin/stats");
+        setStats(res.data);
       } catch (err) {
-        console.error("Admin fetch error:", err);
-        navigate("/"); // redirect if unauthorized
+        console.error("Failed to fetch stats:", err);
+        navigate("/login");
+      } finally {
+        setLoading(false);
       }
     };
-
-    fetchAdminData();
+    fetchStats();
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-center mb-6">🛠 Admin Dashboard</h1>
+    <div className="p-6 max-w-7xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6 text-center">
+        🛠️ Admin Dashboard
+      </h1>
 
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatsCard title="Total Users" value={stats.totalUsers} />
-        <StatsCard title="Total Files" value={stats.totalFiles} />
-        <StatsCard title="Total Logs" value={stats.totalLogs} />
+      {loading ? (
+        <p className="text-center text-gray-500">Loading stats...</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+          <div className="bg-white shadow rounded p-4 text-center">
+            <h2 className="text-xl font-semibold">👥 Users</h2>
+            <p className="text-2xl">{stats.totalUsers}</p>
+          </div>
+          <div className="bg-white shadow rounded p-4 text-center">
+            <h2 className="text-xl font-semibold">📁 Files</h2>
+            <p className="text-2xl">{stats.totalFiles}</p>
+          </div>
+          <div className="bg-white shadow rounded p-4 text-center">
+            <h2 className="text-xl font-semibold">👮 Total Admins</h2>
+            <p className="text-2xl">{stats.totalAdmins}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-12">
+        <h2 className="text-xl font-bold mb-4">👤 Manage Users</h2>
+        <UsersTable />
       </div>
 
-      {/* Users Table */}
-      <UsersTable users={users} />
+      <div className="mb-12">
+        <h2 className="text-xl font-bold mb-4">📄 Manage Files</h2>
+        <FilesTable />
+      </div>
 
-      {/* Audit Logs */}
-      <AuditLogTable logs={logs} />
+      <div className="mb-12">
+        <h2 className="text-xl font-bold mb-4">📜 Audit Logs</h2>
+        <AuditLogTable />
+      </div>
     </div>
   );
 };
