@@ -6,28 +6,36 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
     },
 
     email: {
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
     },
 
     password: {
       type: String,
       required: true,
+      minlength: 6,
     },
 
     isAdmin: {
       type: Boolean,
       default: false,
     },
+
+    // 🚀 You can extend here in future:
+    // role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    // preferences: {},
   },
   { timestamps: true }
 );
 
-// Encrypt password before save
+// 🔐 Encrypt password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
 
@@ -36,7 +44,7 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Compare passwords
+// 🔁 Compare passwords during login
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

@@ -1,11 +1,11 @@
-// components/layout/Navbar.jsx
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { isLoggedIn, logout } from "../../utils/auth";
+import { isLoggedIn, logout, getUser } from "../../utils/auth";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const loggedIn = isLoggedIn();
+  const user = getUser();
 
   const handleProtectedNav = (path) => {
     if (!loggedIn) {
@@ -27,21 +27,33 @@ const Navbar = () => {
       location.pathname === path ? "font-bold underline" : ""
     }`;
 
+  const handleDashboardClick = () => {
+    if (!loggedIn) {
+      alert("🔐 Please login to access this page.");
+      navigate("/login");
+    } else {
+      user?.isAdmin ? navigate("/admin/dashboard") : navigate("/");
+    }
+  };
+
   return (
     <nav className="bg-blue-600 text-white px-6 py-3 flex justify-between items-center">
-      <button
-        onClick={() => handleProtectedNav("/")} 
-        className="text-xl font-bold"
-      >
+      <button onClick={handleDashboardClick} className="text-xl font-bold">
         📊 ChartApp
       </button>
 
       <div className="flex gap-6 items-center">
-        <button onClick={() => handleProtectedNav("/")} className={navLinkClass("/")}>
+        <button
+          onClick={handleDashboardClick}
+          className={navLinkClass(user?.isAdmin ? "/admin/dashboard" : "/")}
+        >
           Dashboard
         </button>
 
-        <button onClick={() => handleProtectedNav("/profile")} className={navLinkClass("/profile")}>
+        <button
+          onClick={() => handleProtectedNav("/profile")}
+          className={navLinkClass("/profile")}
+        >
           Profile
         </button>
 

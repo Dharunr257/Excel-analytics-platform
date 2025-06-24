@@ -8,6 +8,7 @@ import Analyze from './pages/Analyze';
 import Navbar from './components/layout/Navbar';
 import RequireAuth from './components/auth/RequireAuth';
 import Profile from './pages/Profile';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -34,6 +35,8 @@ function App() {
             </RequireAuth>
           }
         />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
       </Routes>
     </Router>
   );

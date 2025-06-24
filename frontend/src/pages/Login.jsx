@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "../api/axiosInstance";
 import { useDispatch } from "react-redux";
 import { setCredentials } from "../redux/slices/authSlice";
-import { useNavigate,Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { saveAuthData } from "../utils/auth";
 
 const Login = () => {
@@ -27,11 +27,20 @@ const Login = () => {
       setLoading(true);
       const res = await axios.post("/auth/login", form);
       const { token, ...userData } = res.data;
+
+      // Save token and user info
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(userData));
-      saveAuthData(res.data.token, res.data.user);
+      saveAuthData(token, userData); // Optional helper if used
+
       dispatch(setCredentials(res.data));
-      navigate("/");
+
+      // Redirect based on role
+      if (res.data.isAdmin) {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       console.error("Login failed:", err);
       alert(
@@ -85,7 +94,6 @@ const Login = () => {
           ➕ Register Now
         </Link>
       </div>
-      
     </div>
   );
 };
