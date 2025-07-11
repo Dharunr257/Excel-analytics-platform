@@ -3,13 +3,19 @@ import multer from 'multer';
 import path from 'path';
 import xlsx from 'xlsx';
 import fs from 'fs';
-
+import { cloudinary } from '../utils/cloudinary.js';
 import { protect } from '../middlewares/authMiddleware.js';
+import { generateAISummary } from '../controllers/uploadController.js';
 import Upload from '../models/Upload.js';
+import axios from 'axios';
+import os from 'os';
+import { v4 as uuidv4 } from 'uuid'; 
+import dotenv from 'dotenv';
 
+dotenv.config();
 const router = express.Router();
 
-// Setup Multer for disk storage
+// Multer disk storage setup
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = 'uploads/';
@@ -34,22 +40,16 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-// @route POST /api/upload
-// @desc Upload Excel file
-// @access Private
+// ✅ POST: Upload Excel to Cloudinary
 router.post('/', protect, upload.single('file'), async (req, res) => {
-
   try {
     const file = req.file;
-    if (!file) {
-      return res.status(400).json({ message: 'No file received' });
-    }
+    if (!file) return res.status(400).json({ message: 'No file received' });
 
-    // Parse the Excel file using SheetJS
+    // Read Excel headers
     const workbook = xlsx.readFile(file.path);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-
     const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
     const headers = jsonData[0] || [];
 
@@ -57,27 +57,36 @@ router.post('/', protect, upload.single('file'), async (req, res) => {
       return res.status(400).json({ message: 'No headers found in Excel file.' });
     }
 
+    // Upload file to Cloudinary
+    const cloudRes = await cloudinary.uploader.upload(file.path, {
+      folder: 'excel_uploads',
+      resource_type: 'raw',
+    });
+
+    // Delete local file after upload
+    fs.unlinkSync(file.path);
+
+    // Save metadata in DB
     const uploadEntry = await Upload.create({
       user: req.user._id,
       fileName: file.originalname,
-      filePath: file.path,
+      filePath: cloudRes.secure_url,      // Public URL
       columns: headers,
+      cloudinary_id: cloudRes.public_id,  // 🔁 Needed for future deletion
     });
 
     res.status(201).json({
       message: 'File uploaded successfully',
       upload: uploadEntry,
-      columns: uploadEntry.columns || [],
+      columns: headers,
     });
   } catch (error) {
-    console.error(error);
+    console.error('Upload failed:', error);
     res.status(500).json({ message: 'Upload failed', error: error.message });
   }
 });
 
-// @route GET /api/upload/history
-// @desc Get all uploads by the logged-in user
-// @access Private
+// ✅ GET: All uploads by user
 router.get('/history', protect, async (req, res) => {
   try {
     const uploads = await Upload.find({ user: req.user._id }).sort({ createdAt: -1 });
@@ -87,58 +96,44 @@ router.get('/history', protect, async (req, res) => {
   }
 });
 
-export default router;
-
-
-// @route GET /api/upload/preview/:id
-// @desc Return parsed sheet data with columns
-// @access Private
+// ✅ GET: Preview Excel data
 router.get('/preview/:id', protect, async (req, res) => {
   try {
     const upload = await Upload.findById(req.params.id);
-    if (!upload) return res.status(404).json({ message: 'File not found' });
+    if (!upload) return res.status(404).json({ message: 'File not found in DB' });
 
-    const workbook = xlsx.readFile(upload.filePath);
+    // ✅ Download file from Cloudinary as buffer
+    const response = await axios.get(upload.filePath, { responseType: 'arraybuffer' });
+    const buffer = Buffer.from(response.data, 'binary');
+
+    // ✅ Write buffer to temp file
+    const tempPath = path.join(os.tmpdir(), `${uuidv4()}.xlsx`);
+    fs.writeFileSync(tempPath, buffer);
+
+    // ✅ Read Excel file
+    const workbook = xlsx.readFile(tempPath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const jsonData = xlsx.utils.sheet_to_json(worksheet); // Array of objects
+    const jsonData = xlsx.utils.sheet_to_json(worksheet); // [{...}, {...}]
     const headers = Object.keys(jsonData[0] || {});
 
+    // ✅ Cleanup temp file
+    fs.unlinkSync(tempPath);
+
+    // ✅ Respond
     res.json({ rows: jsonData, columns: headers });
   } catch (error) {
-    console.error(error);
+    console.error('❌ Preview failed:', error);
     res.status(500).json({ message: 'Preview failed', error: error.message });
   }
 });
 
-
-// @route GET /api/upload/:id
-// @desc Get single upload by ID
-// @access Private
-router.get('/:id', protect, async (req, res) => {
-  try {
-    const upload = await Upload.findById(req.params.id);
-    if (!upload || upload.user.toString() !== req.user._id.toString()) {
-      return res.status(404).json({ message: 'File not found or unauthorized' });
-    }
-    res.json(upload);
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch file info' });
-  }
-});
-
-
-// @route   DELETE /api/upload/:id
-// @desc    Delete an uploaded file by ID (and from disk)
-// @access  Private
+// ✅ DELETE: Delete file from Cloudinary + DB
 router.delete('/:id', protect, async (req, res) => {
   try {
     const upload = await Upload.findById(req.params.id);
-    if (!upload) {
-      return res.status(404).json({ message: 'File not found in DB' });
-    }
+    if (!upload) return res.status(404).json({ message: 'File not found in DB' });
 
-    // ✅ Allow owner or admin to delete
     const isOwner = upload.user.toString() === req.user._id.toString();
     const isAdmin = req.user.isAdmin;
 
@@ -146,34 +141,29 @@ router.delete('/:id', protect, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized to delete this file' });
     }
 
-    // ✅ Delete from disk if exists
-    if (fs.existsSync(upload.filePath)) {
-      fs.unlinkSync(upload.filePath);
-    } else {
-      console.warn("⚠️ File not found on disk:", upload.filePath);
+    // Delete from Cloudinary if uploaded
+    if (upload.cloudinary_id) {
+      await cloudinary.uploader.destroy(upload.cloudinary_id, { resource_type: 'raw' });
     }
 
-    // ✅ Delete from DB
-    await Upload.deleteOne({ _id: req.params.id });
+    // Fallback: Delete local file if it exists
+    if (fs.existsSync(upload.filePath)) {
+      fs.unlinkSync(upload.filePath);
+    }
 
+    await Upload.deleteOne({ _id: upload._id });
     res.json({ message: 'File deleted successfully' });
   } catch (error) {
-    console.error("❌ File delete failed:", error);
     res.status(500).json({ message: 'Failed to delete file', error: error.message });
   }
 });
 
-// @route   GET /api/upload/download/:id
-// @desc    Download uploaded file by ID
-// @access  Private
+// ✅ GET: Download file (redirects if Cloudinary)
 router.get('/download/:id', protect, async (req, res) => {
   try {
     const upload = await Upload.findById(req.params.id);
-    if (!upload) {
-      return res.status(404).json({ message: 'File not found in DB' });
-    }
+    if (!upload) return res.status(404).json({ message: 'File not found in DB' });
 
-    // ✅ Allow owner or admin to download
     const isOwner = upload.user.toString() === req.user._id.toString();
     const isAdmin = req.user.isAdmin;
 
@@ -181,15 +171,70 @@ router.get('/download/:id', protect, async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized to download this file' });
     }
 
+    if (upload.filePath.startsWith('http')) {
+      return res.redirect(upload.filePath); // ✅ Redirect to Cloudinary file
+    }
+
     const filePath = path.resolve(upload.filePath);
     if (fs.existsSync(filePath)) {
-      res.download(filePath, upload.fileName);
-    } else {
-      res.status(404).json({ message: 'File not found on disk' });
+      return res.download(filePath, upload.fileName); // Local fallback
     }
+
+    res.status(404).json({ message: 'File not found on disk or cloud' });
   } catch (error) {
-    console.error("❌ File download error:", error);
     res.status(500).json({ message: 'Failed to download file' });
   }
 });
 
+// ✅ GET: Get upload metadata by ID (used in Analyze.jsx)
+router.get('/:id', protect, async (req, res) => {
+  try {
+    const upload = await Upload.findById(req.params.id);
+    if (!upload) return res.status(404).json({ message: 'File not found' });
+
+    // Optional: restrict access to owner/admin
+    const isOwner = upload.user.toString() === req.user._id.toString();
+    const isAdmin = req.user.isAdmin;
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Unauthorized access to file' });
+    }
+
+    res.json(upload);
+  } catch (error) {
+    console.error('Fetch upload metadata failed:', error);
+    res.status(500).json({ message: 'Failed to fetch file metadata' });
+  }
+});
+
+// routes/uploadRoutes.js
+router.post('/:id/ai-summary', protect, generateAISummary);
+
+router.post('/test-ai', async (req, res) => {
+  try {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({ error: 'Missing OpenRouter API key' });
+    }
+
+    const response = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model: 'google/gemini-2.5-pro-exp-03-25',
+        messages: [{ role: 'user', content: 'Say hello!' }],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    res.json({ success: true, response: response.data });
+  } catch (error) {
+    console.error('❌ Test AI call failed:', error.response?.data || error.message);
+    res.status(500).json({ error: error.response?.data || error.message });
+  }
+});
+
+export default router;

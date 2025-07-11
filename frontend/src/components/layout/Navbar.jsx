@@ -39,7 +39,7 @@ const Navbar = () => {
   return (
     <nav className="bg-blue-600 text-white px-6 py-3 flex justify-between items-center">
       <button onClick={handleDashboardClick} className="text-xl font-bold">
-        📊 ChartApp
+        📊 Excel analysis
       </button>
 
       <div className="flex gap-6 items-center">

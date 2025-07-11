@@ -11,8 +11,12 @@ const uploadSchema = new mongoose.Schema({
     required: true,
   },
   filePath: {
-    type: String,
+    type: String, // Secure URL from Cloudinary
     required: true,
+  },
+  cloudinary_id: {
+    type: String, // ✅ Needed for deletion from Cloudinary
+    required: false,
   },
   columns: {
     type: [String],

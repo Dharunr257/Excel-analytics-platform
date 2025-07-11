@@ -298,11 +298,6 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
         </div>
       </div>
 
-      {/* AI Summary */}
-      <div className="mt-6 p-4 border rounded bg-gray-50">
-        <h2 className="text-lg font-semibold mb-2">🤖 AI Summary</h2>
-        <AISummary rows={dataRows} />
-      </div>
     </div>
   );
 };
