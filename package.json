@@ -1,0 +1,22 @@
+{
+  "name": "excel-analytics-platform",
+  "version": "1.0.0",
+  "description": "A platform for analyzing Excel files with a web interface",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "scripts": {
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm run dev"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "mongoose": "^6.7.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
