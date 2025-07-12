@@ -1,26 +1,53 @@
-# Logs
-logs
-*.log
+# Node.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
 .env
-./.env
+.env.local
+.env.*.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Logs
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
+
+# Build outputs
+dist/
+build/
+out/
+coverage/
+
+# React / Vite
+*.local
+*.cache/
+*.parcel-cache/
+.next/
+.cache/
+.eslintcache
+
+# Misc
+*.tgz
+*.bak
+*.swp
+
+# TypeScript
+*.tsbuildinfo
+
+# MongoDB dump
+dump/
+
+# Uploads / temporary storage (optional if using local file uploads)
+uploads/
+temp/
