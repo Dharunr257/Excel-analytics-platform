@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import axiosInstance from '../../api/axiosInstance.js';
 
-const AISummary = ({ fileId }) => {
+const AISummary = ({ fileId, onSummaryGenerated }) => {
   const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const stripMarkdown = (text) => {
-    return text.replace(/\*\*(.*?)\*\*/g, '$1'); // Removes bold formatting
+    return text.replace(/\*\*(.*?)\*\*/g, '$1'); // Removes **bold**
   };
 
   const generateSummary = async () => {
@@ -20,6 +20,9 @@ const AISummary = ({ fileId }) => {
       if (res.data && res.data.summary) {
         const cleaned = stripMarkdown(res.data.summary);
         setSummary(cleaned);
+        if (onSummaryGenerated) {
+          onSummaryGenerated(cleaned); // Send to parent for PDF use
+        }
       } else {
         setError('No summary returned.');
       }
@@ -44,7 +47,12 @@ const AISummary = ({ fileId }) => {
       >
         {loading ? (
           <span className="flex items-center gap-2">
-            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg
+              className="animate-spin h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
               <circle
                 className="opacity-25"
                 cx="12"

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import Select from "react-select";
+import { useParams } from "react-router-dom";
 import { ChromePicker } from "react-color";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -9,10 +10,15 @@ import Chart2DRenderer from "./Chart2DRenderer";
 import Chart3DRenderer from "./Chart3DRenderer";
 import ChartHistogram from "./ChartHistogram";
 import ChartMetadata from "./ChartMetadata";
-import AISummary from "./AISummary";
 import { CHART_TYPES } from "../../constants/chartOptions";
 
-const ChartPicker = ({ dataRows = [], columns = [] }) => {
+const ChartPicker = ({
+  dataRows = [],
+  columns = [],
+  fileName = "",
+  aiSummary = "",
+}) => {
+  const { id } = useParams();
   const [mode, setMode] = useState("2d");
   const [chartOption, setChartOption] = useState(CHART_TYPES["2d"][0]);
   const [selectedX, setSelectedX] = useState("");
@@ -24,7 +30,6 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
 
   const chartType = chartOption.value;
 
-  // 🔽 DOWNLOAD PNG
   const handleDownload = async () => {
     try {
       if (
@@ -51,11 +56,9 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
     }
   };
 
-  // 📄 EXPORT PDF
   const handlePDF = async () => {
     try {
       let imgData = null;
-
       if (
         (mode === "3d" || mode === "distribution") &&
         chartRef.current?.downloadImage
@@ -73,12 +76,9 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
       }
 
       const pdf = new jsPDF();
-      if (imgData) {
-        pdf.text(`${chartType.toUpperCase()} Chart Report`, 10, 10);
-        pdf.addImage(imgData, "PNG", 10, 20, 180, 100);
-      }
+      pdf.text(`${chartType.toUpperCase()} Chart Report`, 10, 10);
+      if (imgData) pdf.addImage(imgData, "PNG", 10, 20, 180, 100);
 
-      // Metadata
       pdf.setFontSize(11);
       pdf.text(`X Axis: ${selectedX || "N/A"}`, 10, 130);
       pdf.text(`Y Axis: ${selectedY || "N/A"}`, 10, 140);
@@ -86,12 +86,27 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
       pdf.text(`Total Rows: ${dataRows.length}`, 10, 160);
       pdf.text(`Chart Mode: ${mode.toUpperCase()}`, 10, 170);
 
-      // AI Summary
-      pdf.text("AI Summary:", 10, 185);
-      pdf.setFontSize(10);
-      const aiSummary = AISummary({ rows: dataRows, textOnly: true });
-      const lines = pdf.splitTextToSize(aiSummary, 180);
-      pdf.text(lines, 10, 193);
+      if (aiSummary) {
+        pdf.setFontSize(12);
+        pdf.text("AI Summary:", 10, 185);
+
+        pdf.setFontSize(10);
+        const margin = 10;
+        const lineHeight = 7;
+        const pageHeight = pdf.internal.pageSize.height;
+        const maxY = pageHeight - margin;
+        const lines = pdf.splitTextToSize(aiSummary, 180);
+
+        let currentY = 193;
+        lines.forEach((line) => {
+          if (currentY + lineHeight > maxY) {
+            pdf.addPage();
+            currentY = margin;
+          }
+          pdf.text(line, margin, currentY);
+          currentY += lineHeight;
+        });
+      }
 
       pdf.save(`${chartType}-chart-report.pdf`);
     } catch (err) {
@@ -171,9 +186,7 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Chart Controls */}
       <div className="flex flex-wrap justify-center items-center gap-6">
-        {/* Mode Selection */}
         <div>
           <label className="block mb-1 text-sm font-medium">
             Chart Category
@@ -196,13 +209,11 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
           </select>
         </div>
 
-        {/* Chart Type */}
         <div>
           <label className="block mb-1 text-sm font-medium">Chart Type</label>
           {renderDropdown(mode)}
         </div>
 
-        {/* Color Picker */}
         <div>
           <label className="block mb-1 text-sm font-medium">Color</label>
           <div className="relative">
@@ -223,7 +234,6 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
         </div>
       </div>
 
-      {/* Axis Selectors */}
       <div className="flex justify-center gap-6">
         <div>
           <label className="block mb-1 text-sm">X Axis</label>
@@ -274,14 +284,13 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
         )}
       </div>
 
-      {/* Chart Display */}
       <div id="chart-container" className="p-4 bg-white rounded shadow">
         {renderChart()}
       </div>
 
-      {/* Metadata + Actions */}
       <div className="flex flex-wrap justify-evenly items-center gap-6 mt-4">
-        <ChartMetadata dataRows={dataRows} />
+        {/* Metadata */}
+        <ChartMetadata dataRows={dataRows} columns={columns} />
         <div className="flex gap-4">
           <button
             onClick={handleDownload}
@@ -297,7 +306,6 @@ const ChartPicker = ({ dataRows = [], columns = [] }) => {
           </button>
         </div>
       </div>
-
     </div>
   );
 };

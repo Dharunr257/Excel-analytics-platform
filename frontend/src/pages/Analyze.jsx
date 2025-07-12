@@ -2,10 +2,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../api/axiosInstance";
-import AISummary from "../components/charts/AISummary";
 
+import AISummary from "../components/charts/AISummary";
 import ChartPicker from "../components/charts/ChartPicker";
-import ChartMetadata from "../components/charts/ChartMetadata";
 
 const Analyze = () => {
   const { id } = useParams();
@@ -14,8 +13,10 @@ const Analyze = () => {
   const [fileData, setFileData] = useState(null);
   const [columns, setColumns] = useState([]);
   const [dataRows, setDataRows] = useState([]);
+  const [aiSummary, setAiSummary] = useState(""); // ✅ Summary state
 
   const user = JSON.parse(localStorage.getItem("user"));
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -32,7 +33,6 @@ const Analyze = () => {
       } catch (err) {
         console.error("Error loading file data:", err);
         alert("Failed to load file data. Redirecting...");
-        const user = JSON.parse(localStorage.getItem("user"));
         user?.isAdmin ? navigate("/admin/dashboard") : navigate("/");
       }
     };
@@ -55,20 +55,16 @@ const Analyze = () => {
         </p>
       </div>
 
-      {/* Metadata */}
-      <ChartMetadata dataRows={dataRows} columns={columns} />
 
-      {/* Chart Picker */}
+      {/* Chart Picker with summary passed */}
       <ChartPicker
         dataRows={dataRows}
         columns={columns}
         fileName={fileData?.fileName}
+        aiSummary={aiSummary} // ✅ Pass to ChartPicker
       />
-      {/* AI Summary */}
-      <div className="mt-10">
-        <h2 className="text-xl font-semibold mb-4">📌 AI Summary</h2>
-        <AISummary fileId={id}/>
-      </div>
+      {/* AI Summary Block */}
+      <AISummary fileId={id} onSummaryGenerated={setAiSummary} />
     </div>
   );
 };

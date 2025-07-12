@@ -1,34 +1,18 @@
-// components/admin/UsersTable.jsx
-import { useEffect, useState } from "react";
-import axios from "../../api/axiosInstance";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import axios from "../../api/axiosInstance";
 
-const UsersTable = () => {
-  const [users, setUsers] = useState([]);
-
-  const fetchUsers = async () => {
-    try {
-      const res = await axios.get("/admin/users");
-      setUsers(res.data);
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-    }
-  };
-
+// Accept users as props from parent
+const UsersTable = ({ users = [] }) => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
       await axios.delete(`/admin/user/${id}`);
-      setUsers((prev) => prev.filter((u) => u._id !== id));
+      window.location.reload(); // Or lift state to remove without refresh
     } catch (err) {
       alert("Failed to delete user");
     }
   };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   return (
     <div className="overflow-x-auto bg-white p-4 shadow rounded">
@@ -48,7 +32,7 @@ const UsersTable = () => {
               <td>{u.name}</td>
               <td>{u.email}</td>
               <td>{u.isAdmin ? "Admin" : "User"}</td>
-              <td>{u.fileCount || 0}</td>
+              <td>{u.uploadCount || 0}</td>
               <td>
                 <button
                   onClick={() => handleDelete(u._id)}
