@@ -1,20 +1,19 @@
-// server.js
-import path from 'path';
 import express from 'express';
+import path from 'path';
 import dotenv from 'dotenv';
-import app from './app.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import connectDB from './config/db.js';
-import fs from 'fs';
+import app from './app.js';
 
+// Load environment variables
 dotenv.config();
 
-// __dirname fix for ESM
+// Fix __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Serve frontend in production
+// ✅ Serve Vite frontend from /dist (NOT /build)
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../frontend/dist')));
   app.get('*', (req, res) =>
@@ -22,25 +21,12 @@ if (process.env.NODE_ENV === 'production') {
   );
 }
 
-// Debug route loading
-try {
-  const routeCheck = fs.readFileSync('./routes/uploadRoutes.js', 'utf-8');
-  console.log('✅ uploadRoutes.js loaded successfully.');
-} catch (err) {
-  console.error('❌ Failed to read uploadRoutes.js:', err.message);
-}
-
-app.on('mount', () => {
-  app._router.stack.forEach((middleware) => {
-    if (middleware.route) {
-      const method = Object.keys(middleware.route.methods)[0].toUpperCase();
-      const path = middleware.route.path;
-      console.log(`📌 Route: [${method}] ${path}`);
-    }
-  });
+// Default route (for sanity check)
+app.get('/', (req, res) => {
+  res.send('API is running...');
 });
 
-// Connect to DB and start server
+// Start server
 const PORT = process.env.PORT || 5000;
 connectDB().then(() => {
   app.listen(PORT, () => {
