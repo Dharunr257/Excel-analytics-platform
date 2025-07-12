@@ -33,6 +33,11 @@ try {
 } catch (e) {
   console.error('❌ Route parsing failed:', e);
 }
+app._router.stack.forEach((r) => {
+  if (r.route && r.route.path) {
+    console.log(`🛣️  ROUTE: ${r.route.path}`);
+  }
+});
 
 
 export default app;
