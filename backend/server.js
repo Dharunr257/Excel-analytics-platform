@@ -1,28 +1,17 @@
-import express from 'express';
-import cors from 'cors';
+// server.js
 import path from 'path';
 import dotenv from 'dotenv';
+import app from './app.js';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import connectDB from './config/db.js'; // 🔁 Modular DB import
+import connectDB from './config/db.js';
+import fs from 'fs';
 
-// Load environment variables
 dotenv.config();
 
-// Fix __dirname for ES Modules
+// __dirname fix for ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Initialize express app
-const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Routes
-import uploadRoutes from './routes/uploadRoutes.js';
-app.use('/api/upload', uploadRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
@@ -32,12 +21,25 @@ if (process.env.NODE_ENV === 'production') {
   );
 }
 
-// Default route
-app.get('/', (req, res) => {
-  res.send('API is running...');
+// Debug route loading
+try {
+  const routeCheck = fs.readFileSync('./routes/uploadRoutes.js', 'utf-8');
+  console.log('✅ uploadRoutes.js loaded successfully.');
+} catch (err) {
+  console.error('❌ Failed to read uploadRoutes.js:', err.message);
+}
+
+app.on('mount', () => {
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      const method = Object.keys(middleware.route.methods)[0].toUpperCase();
+      const path = middleware.route.path;
+      console.log(`📌 Route: [${method}] ${path}`);
+    }
+  });
 });
 
-// Start server after DB connects
+// Connect to DB and start server
 const PORT = process.env.PORT || 5000;
 connectDB().then(() => {
   app.listen(PORT, () => {
