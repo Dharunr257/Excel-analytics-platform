@@ -219,7 +219,7 @@ router.post('/test-ai', async (req, res) => {
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'google/gemini-2.5-pro-exp-03-25',
+        model: 'openrouter/auto',
         messages: [{ role: 'user', content: 'Say hello!' }],
       },
       {
