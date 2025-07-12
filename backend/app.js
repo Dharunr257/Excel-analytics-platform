@@ -19,4 +19,20 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
+import fs from 'fs';
+
+const routeCheck = fs.readFileSync('./backend/routes/uploadRoutes.js', 'utf-8');
+console.log('✅ uploadRoutes.js loaded successfully.');
+
+try {
+  app._router.stack.forEach((r) => {
+    if (r.route) {
+      console.log(`📌 Route: ${Object.keys(r.route.methods)} ${r.route.path}`);
+    }
+  });
+} catch (e) {
+  console.error('❌ Route parsing failed:', e);
+}
+
+
 export default app;
