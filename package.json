@@ -3,12 +3,9 @@
   "version": "1.0.0",
   "description": "A platform for analyzing Excel files with a web interface",
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "npm run dev --prefix backend",
-    "dev:client": "npm start --prefix frontend",
-    "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "npm run start --prefix backend"
-  },
+  "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
+  "start": "npm run start --prefix backend"
+},
   "engines": {
     "node": ">=14.0.0"
   },
