@@ -1,11 +1,12 @@
 {
   "name": "excel-analytics-platform",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "install": "npm install --prefix backend && npm install --prefix frontend",
     "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-    "build": "npm run build --prefix frontend",
-    "start-backend": "npm start --prefix backend",
+    "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
+    "start-backend": "npm run start --prefix backend",
     "start": "npm run build && npm run start-backend"
   },
   "devDependencies": {
