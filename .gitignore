@@ -25,11 +25,8 @@ Thumbs.db
 .idea/
 
 # Build outputs
-# Ignore backend build artifacts (if any)
-backend/build/
-
-# DON'T ignore frontend/build (needed by Render)
-# frontend/build/   <-- ⚠️ DO NOT uncomment this
+dist/
+build/
 out/
 coverage/
 
